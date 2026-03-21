@@ -21,7 +21,7 @@ dev-up:
     @docker compose ps
     @echo "Registering bchad Temporal namespace (idempotent)..."
     @sleep 3
-    @docker exec bchad-temporal sh -c 'IP=$(hostname -i | tr -d " "); tctl --address $IP:7233 --namespace bchad namespace register --retention 72h 2>&1 | grep -v DEPRECATION; true'
+    @docker exec bchad-temporal sh -c 'temporal operator namespace describe --namespace bchad --address temporal:7233 >/dev/null 2>&1 || temporal operator namespace create --namespace bchad --retention 72h --address temporal:7233 2>&1; true'
     @echo "Registering custom search attributes (idempotent)..."
     @docker exec bchad-temporal sh -c 'temporal operator search-attribute create --namespace bchad --address temporal:7233 --name product --type Keyword --name engineer --type Keyword --name trust_phase --type Keyword 2>&1; true'
 
