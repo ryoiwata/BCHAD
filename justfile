@@ -24,14 +24,14 @@ dev-down:
 
 # Run database migrations (up)
 migrate:
-    go run github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
+    go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
         -path migrations \
         -database "$BCHAD_DATABASE_URL" \
         up
 
 # Rollback last database migration
 migrate-down:
-    go run github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
+    go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
         -path migrations \
         -database "$BCHAD_DATABASE_URL" \
         down 1
