@@ -21,6 +21,11 @@ import (
 	"github.com/athena-digital/bchad/workflows"
 )
 
+// stdinScanner is a single shared scanner for os.Stdin. Creating a new
+// bufio.Scanner per prompt call causes the scanner's internal buffer to
+// consume ahead-of-line bytes from the pipe, losing subsequent input.
+var stdinScanner = bufio.NewScanner(os.Stdin)
+
 func init() {
 	rootCmd.AddCommand(runCmd)
 	runCmd.Flags().StringP("spec", "s", "", "path to BCHADSpec JSON file or natural language brief (required)")
@@ -430,9 +435,8 @@ func resolveSchemaPath() (string, error) {
 // promptYesNo asks a yes/no question and returns true for 'y'/'Y'.
 func promptYesNo(prompt string) bool {
 	fmt.Print(prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+	if stdinScanner.Scan() {
+		answer := strings.TrimSpace(strings.ToLower(stdinScanner.Text()))
 		return answer == "y" || answer == "yes"
 	}
 	return false
@@ -441,9 +445,8 @@ func promptYesNo(prompt string) bool {
 // promptInput reads a line from stdin for optional input.
 func promptInput(prompt string) string {
 	fmt.Print(prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		return strings.TrimSpace(scanner.Text())
+	if stdinScanner.Scan() {
+		return strings.TrimSpace(stdinScanner.Text())
 	}
 	return ""
 }
