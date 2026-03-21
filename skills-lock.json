@@ -31,6 +31,11 @@
       "sourceType": "github",
       "computedHash": "698bf93a84dae18fd7bd0b1d35c21427307fde78fbdf4624be9726f5f98189ca"
     },
+    "new-terraform-provider": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "computedHash": "e294bd62d9710030080ccfcdef99a7a5b766166b2a4d6c760c5d63b2936fb7e9"
+    },
     "nextjs-app-router-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
@@ -55,6 +60,26 @@
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "0728424e6f56972333bd60e4f45da0322ac6db273744d863aa2b94f1e95d61ec"
+    },
+    "terraform-search-import": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "computedHash": "50eef65b0f1808f2471a400dcd1324fb07060253c2ad755bd791bd1cac19628b"
+    },
+    "terraform-stacks": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "computedHash": "c90c845f0d9b08341d6c85d6957f105e8973582870f4a6601f5366dc57d8171a"
+    },
+    "terraform-style-guide": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "computedHash": "1fb650e4627c740f024b80947964769f5f5d58efff54870cef2791324d5aa451"
+    },
+    "terraform-test": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "computedHash": "5a62d5e759b4720304127bd1e94d405e0f91a907965d87b1117d2b91d7eb2e18"
     }
   }
 }
