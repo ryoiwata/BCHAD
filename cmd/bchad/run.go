@@ -5,16 +5,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/spf13/cobra"
 	"go.temporal.io/sdk/client"
 
 	"github.com/athena-digital/bchad/internal/gateway"
+	"github.com/athena-digital/bchad/internal/intelligence"
 	"github.com/athena-digital/bchad/internal/plan"
 	"github.com/athena-digital/bchad/internal/spec"
 	"github.com/athena-digital/bchad/pkg/bchadplan"
@@ -84,6 +87,11 @@ func runPipeline(cmd *cobra.Command, _ []string) error {
 	bchadPlan, err := g.Generate(ctx, ps)
 	if err != nil {
 		return fmt.Errorf("plan generation: %w", err)
+	}
+
+	// Enrich plan with repo URL from the indexed structural profile in S3.
+	if repoURL := loadRepoURL(ctx, ps.Spec.Product); repoURL != "" {
+		bchadPlan.RepoURL = repoURL
 	}
 
 	// --- Print the plan ---
@@ -358,6 +366,45 @@ func monitorPipeline(ctx context.Context, c client.Client, we client.WorkflowRun
 			}
 		}
 	}
+}
+
+// loadRepoURL fetches the structural profile for the given product from S3 and
+// returns its RepoURL field. Returns "" if the profile is unavailable or unparseable.
+func loadRepoURL(ctx context.Context, productID string) string {
+	s3Endpoint := os.Getenv("BCHAD_S3_ENDPOINT")
+	if s3Endpoint == "" {
+		s3Endpoint = "http://localhost:9000"
+	}
+	s3Bucket := os.Getenv("BCHAD_S3_BUCKET_PROFILES")
+	if s3Bucket == "" {
+		s3Bucket = "bchad-codebase-profiles"
+	}
+
+	s3Client, err := newS3Client(ctx, s3Endpoint)
+	if err != nil {
+		return ""
+	}
+
+	key := fmt.Sprintf("bchad-codebase-profiles/%s/structural_profile.json", productID)
+	out, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: &s3Bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = out.Body.Close() }()
+
+	data, err := io.ReadAll(out.Body)
+	if err != nil {
+		return ""
+	}
+
+	var profile intelligence.StructuralProfile
+	if err := json.Unmarshal(data, &profile); err != nil {
+		return ""
+	}
+	return profile.RepoURL
 }
 
 // resolveEngineerID resolves the engineer's GitHub login or falls back to $USER.

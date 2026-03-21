@@ -32,6 +32,7 @@ type PRInput struct {
 	ProductID  string   `json:"product_id"`
 	EngineerID string   `json:"engineer_id"`
 	StageIDs   []string `json:"stage_ids"`
+	RepoURL    string   `json:"repo_url,omitempty"` // HTTPS URL of the target repo
 }
 
 // PROutput is the output of AssemblePRActivity.
@@ -107,8 +108,13 @@ func AssemblePRActivity(ctx context.Context, input PRInput) (*PROutput, error) {
 
 	branchName := fmt.Sprintf("bchad/%s", input.PlanID)
 
+	repoURL := input.RepoURL
+	if repoURL == "" {
+		repoURL = fmt.Sprintf("https://github.com/athena-digital/%s", input.ProductID)
+	}
+
 	return &PROutput{
-		PRURL:      fmt.Sprintf("https://github.com/athena-digital/%s/pull/stub-1234", input.ProductID),
+		PRURL:      fmt.Sprintf("%s/pull/stub-1234", repoURL),
 		BranchName: branchName,
 	}, nil
 }

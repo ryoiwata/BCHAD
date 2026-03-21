@@ -176,6 +176,7 @@ func PipelineWorkflow(ctx workflow.Context, input PipelineInput) (*PipelineOutpu
 		PlanID:     input.Plan.ID,
 		ProductID:  input.ProductID,
 		EngineerID: input.EngineerID,
+		RepoURL:    input.Plan.RepoURL,
 	}
 	for _, s := range input.Plan.Stages {
 		prInput.StageIDs = append(prInput.StageIDs, s.ID)
