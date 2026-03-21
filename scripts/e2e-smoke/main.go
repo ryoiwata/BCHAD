@@ -20,12 +20,17 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/valkey-io/valkey-go"
 	"go.temporal.io/sdk/client"
@@ -43,7 +48,7 @@ func main() {
 	step3MinIO(ctx)
 	step4Temporal(ctx)
 	step5Anthropic(ctx)
-	// step6 (git commit) requires GITHUB_TOKEN and a test repo — skipped if not configured
+	step6Git(ctx)
 }
 
 // step1Postgres connects to Postgres, runs SELECT 1, and verifies pgvector is available.
@@ -368,6 +373,100 @@ func step5Anthropic(ctx context.Context) {
 	} else {
 		slog.Info("step 5: generated file written", "path", tmpFile)
 	}
+}
+
+// step6Git clones the test repo, creates a branch, writes the LLM-generated file
+// from step 5, commits, and pushes. Requires GITHUB_TOKEN.
+func step6Git(ctx context.Context) {
+	slog.Info("step 6: git clone, branch, commit, push")
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		slog.Info("step 6 SKIP: GITHUB_TOKEN not set")
+		return
+	}
+
+	// Read generated file written by step 5.
+	generatedPath := "/tmp/bchad-smoke-generated.go"
+	generatedContent, err := os.ReadFile(generatedPath)
+	if err != nil {
+		slog.Warn("step 6 SKIP: generated file from step 5 not found", "path", generatedPath, "error", err)
+		return
+	}
+
+	// Clone to a temp directory.
+	dir, err := os.MkdirTemp("", "bchad-smoke-")
+	if err != nil {
+		slog.Error("step 6 FAIL: create temp dir", "error", err)
+		return
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	repoURL := "https://github.com/ryoiwata/node-express-prisma-v1-official-app.git"
+	auth := &githttp.BasicAuth{
+		Username: "x-access-token",
+		Password: token,
+	}
+
+	slog.Info("step 6: cloning repo", "url", repoURL)
+	repo, err := git.PlainCloneContext(ctx, dir, false, &git.CloneOptions{
+		URL:   repoURL,
+		Auth:  auth,
+		Depth: 1,
+	})
+	if err != nil {
+		slog.Error("step 6 FAIL: clone", "error", err)
+		return
+	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		slog.Error("step 6 FAIL: get worktree", "error", err)
+		return
+	}
+
+	// Create and checkout a new branch.
+	branchName := fmt.Sprintf("bchad-smoke-%d", time.Now().UnixNano())
+	if err := wt.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName(branchName),
+		Create: true,
+	}); err != nil {
+		slog.Error("step 6 FAIL: create branch", "branch", branchName, "error", err)
+		return
+	}
+
+	// Write the LLM-generated file into the repo.
+	destPath := filepath.Join(dir, "bchad-smoke-generated.go")
+	if err := os.WriteFile(destPath, generatedContent, 0600); err != nil {
+		slog.Error("step 6 FAIL: write generated file", "error", err)
+		return
+	}
+
+	if _, err := wt.Add("bchad-smoke-generated.go"); err != nil {
+		slog.Error("step 6 FAIL: git add", "error", err)
+		return
+	}
+
+	commit, err := wt.Commit("chore(smoke): add BCHAD smoke test generated file", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "BCHAD Smoke Test",
+			Email: "bchad-smoke@athena.internal",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		slog.Error("step 6 FAIL: commit", "error", err)
+		return
+	}
+
+	if err := repo.PushContext(ctx, &git.PushOptions{
+		Auth: auth,
+	}); err != nil {
+		slog.Error("step 6 FAIL: push", "branch", branchName, "error", err)
+		return
+	}
+
+	slog.Info("step 6 PASS: pushed branch", "branch", branchName, "commit", commit.String())
 }
 
 func min(a, b int) int {
