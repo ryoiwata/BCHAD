@@ -2,7 +2,7 @@
 
 **SF-2026-06 · Athena Digital · March 2026**
 
-*Phased implementation plan for BCHAD across three six-month increments. Based on the PRD (SF-2026-04), Framework (SF-2026-03), and Tech Stack (SF-2026-05). Team: 3–5 engineers, full-time dedicated.*
+*Phased implementation plan for BCHAD across three six-month increments. Based on the PRD (SF-2026-04), Framework (SF-2026-03), and Tech Stack (SF-2026-05). Team: 3–5 engineers, full-time dedicated. Rev. 2 incorporates feedback from design interview.*
 
 ---
 
@@ -12,7 +12,7 @@
 
 **Build the test harness before the system.** Every component has well-defined inputs and outputs (versioned JSON schemas). Table-driven tests, snapshot tests, and Temporal replay tests are written alongside the implementation, not after. The 60-feature validation protocol is the acceptance test for the entire v1 system.
 
-**Sequential execution in v1 is intentional.** The DAG runs stages in dependency order (migrate → api → frontend → tests, config parallel with migrate). No parallel dispatch in v1 — this simplifies debugging and the timing math shows it's comfortable within the 15-minute NFR.
+**Strictly sequential execution in v1.** The DAG runs stages one at a time in dependency order: migrate → config → api → frontend → tests. No parallel dispatch, even for independent stages (migrate and config). This simplifies debugging, eliminates concurrency-related test failures, and the timing math shows it's comfortable within the 15-minute NFR (~9–14 minutes sequential). Parallel dispatch of independent stages (saving 15–20 seconds per run) ships in v2 Phase A.
 
 **Highest-risk = earliest start.** The ordering of workstreams within each phase reflects risk, not complexity. Codebase intelligence starts in week 1 and gets the most ongoing iteration time.
 
@@ -55,8 +55,13 @@
 - `pkg/bchadplan/types.go` — Go structs for the DAG plan
 - `pkg/artifacts/types.go` — StageArtifact, GateResult, GeneratedFile
 
+**End-to-end "hello world" skeleton** (Days 7–8)
+- Hardcoded BCHADSpec → hardcoded BCHADPlan → single Anthropic API call with a minimal prompt ("Generate a Go file that prints hello world") → parse output → commit to feature branch via go-git on the `payments-dashboard-test` repo
+- Proves every integration point works before any component is built properly: Anthropic API key and headers, go-git authentication with GITHUB_TOKEN, pgx connection pooling to Postgres, MinIO S3 bucket access, Temporal dev server connectivity
+- This is a throwaway script (`scripts/e2e-smoke/main.go`), not production code — its purpose is to catch infrastructure issues (API key scoping, git auth, connection strings) that would otherwise surface mid-Phase 2
+
 #### Milestone
-`just dev-up` starts all services. `just migrate` applies all migrations cleanly. `go build ./...` compiles with zero errors. JSON schemas validate against their corresponding Go struct fixtures.
+`just dev-up` starts all services. `just migrate` applies all migrations cleanly. `go build ./...` compiles with zero errors. JSON schemas validate against their corresponding Go struct fixtures. **A feature branch exists on the `payments-dashboard-test` repo with one LLM-generated file committed to it** (hello world skeleton proves all integration points).
 
 #### Dependencies
 None — this is the foundation.
@@ -70,6 +75,12 @@ None — this is the foundation.
 *Starts on Day 5, overlapping with Phase 0 completion.*
 
 #### Deliverables
+
+**Manual codebase exploration** (Days 5–7, before writing indexer code)
+- One engineer spends 2–3 days reading Payments Dashboard and Claims Portal codebases by hand
+- Document expected patterns for each stage type: what does a good migration look like (naming, rollback, index strategy), where are the route handlers (file path, middleware chain, error handling pattern), how are tests organized (framework, fixtures, assertion style), what does the component directory structure look like
+- Output: `docs/codebase-exploration/payments-dashboard.md` and `docs/codebase-exploration/claims-portal.md` — these become the acceptance criteria for the indexer. If automated extraction doesn't match what a human found by reading the code, the indexer is wrong
+- This calibration step is critical: codebase intelligence is the highest-risk component and the indexer can only be evaluated against known-good patterns
 
 **Indexer** (`internal/intelligence/`)
 - `scanner.go` — structural profile extraction: file tree, config files, package manifests, framework detection, linter/formatter config copy to S3
@@ -96,8 +107,15 @@ None — this is the foundation.
 - `ranking_test.go` — token budget filling; truncation strategies
 - `cache_test.go` — cache hit/miss; TTL behavior
 
+**Embedding validation** (Day 20–21, after indexer runs on both products)
+- Embed 20–30 real code patterns from each product using Voyage Code 3 against live pgvector
+- Run filtered similarity queries for all five stage types on both products
+- Manually evaluate whether the top-3 results per stage type are the correct canonical examples (compare against the patterns documented in the manual codebase exploration step)
+- This is a half-day of hands-on validation per product that catches embedding quality issues before Phase 2 builds on retrieval results
+- If similar patterns don't cluster or the top results are wrong examples, investigate: is the embedding model misranking, is the filter too broad/narrow, or is the extractor selecting wrong patterns?
+
 #### Milestone
-Both product profiles indexed. Tech leads for Payments Dashboard and Claims Portal complete onboarding questionnaires and validate the throwaway CRUD output. Profile corrections applied. Retrieval queries return relevant patterns for all five CRUD+UI stage types for both products.
+Both product profiles indexed. Tech leads for Payments Dashboard and Claims Portal complete onboarding questionnaires and validate the throwaway CRUD output. Profile corrections applied. Retrieval queries return relevant patterns for all five CRUD+UI stage types for both products. **Embedding validation confirms top-3 retrieval results match the patterns documented in the manual codebase exploration** — if they don't, profile corrections are applied before Phase 2 depends on retrieval.
 
 #### Dependencies
 - Phase 0 complete (database schema, S3 buckets, package types)
@@ -111,7 +129,7 @@ Both product profiles indexed. Tech leads for Payments Dashboard and Claims Port
 
 **Objective:** Spec parsing, plan generation, Temporal workflow skeleton, and LLM gateway are functional end-to-end. A spec enters and a plan with cost estimates exits. The workflow can execute stub activities.
 
-*Starts on Day 15, overlapping with Phase 1.*
+*Starts on Day 15, overlapping with Phase 1. Note: Phase 1 retrieval service may not be complete until Day 22. The plan generator uses stub codebase refs initially (hardcoded file paths from the manual codebase exploration docs) and wires in real retrieval results once Phase 1 delivers. The plan generator's core logic — template parameterization, dependency ordering, cost estimation — is testable without live retrieval.*
 
 #### Deliverables
 
@@ -154,9 +172,9 @@ Both product profiles indexed. Tech leads for Payments Dashboard and Claims Port
 
 #### Dependencies
 - Phase 0 complete (schemas, database, Go modules)
-- Phase 1 retrieval service (for plan generation to include codebase refs)
+- Phase 1 retrieval service (for plan generation to include real codebase refs — stub refs used until retrieval is ready; real refs wired in by Day 22)
 - ANTHROPIC_API_KEY configured
-- GITHUB_TOKEN configured
+- GITHUB_TOKEN configured (with `repo` + `read:user` scopes for identity resolution)
 
 ---
 
@@ -187,13 +205,25 @@ Both product profiles indexed. Tech leads for Payments Dashboard and Claims Port
 **Verification Gates** (`internal/verify/`)
 - `gate.go` — dispatches Docker container via Docker Engine API client; mounts generated files + product toolchain files (from S3 codebase profile) + generated code; runs verification commands from language adapter; parses exit code + stdout/stderr into structured GateResult JSON; 60-second timeout (NFR-3)
 - `classifier.go` — hybrid error classification: rule-based first (TS error codes → Type; ESLint rule IDs → Style; Prettier diff → Style; Semgrep rule IDs → Security; syntax parse error class → Syntax; route conflict check output → Conflict; spec compliance check → Specification); LLM fallback for ambiguous 20% (Haiku 3.5 call with gate output + generated code); classification drives retry routing
-- `security.go` — custom Semgrep rule execution: forge-sensitive-field-exposure, forge-missing-auth, forge-hardcoded-secret; Trivy dependency scan on manifests
+- `security.go` — custom Semgrep rule execution + Trivy dependency scan on manifests
 - Docker images for Tier 1 gates (`docker/verify-ts/`, `docker/verify-py/`, `docker/security-scan/`): base runtime images with common tools pre-installed; product-specific deps mounted at runtime from codebase profile S3 path
+
+**Custom Semgrep rules** (`semgrep/`) — written and tested early in Phase 3, not as an afterthought. A missing auth check that slips through verification is a SOC 2 finding.
+- `bchad-sensitive-field-exposure` — detect sensitive field (vault_ref, etc.) returned in API response without masking
+- `bchad-missing-auth` — detect route handler registered without auth middleware
+- `bchad-hardcoded-secret` — detect hardcoded credentials (api_key, secret, password, token patterns with string values ≥8 chars)
+- Additional rules discovered during Phase 1 manual codebase exploration (e.g., product-specific audit logging patterns, Vault integration patterns)
+- Each rule has a corresponding test fixture in `testdata/semgrep/` with both passing and failing code samples
+
+**Docker layer caching for gate containers** — critical for meeting the 60-second NFR-3
+- Gate container Dockerfiles use lockfile-hash-based cache layers: `COPY package-lock.json . && RUN npm ci` as a separate layer before code mount
+- When the product's lockfile hasn't changed since the last gate run (the common case), the cached layer is reused and `npm ci` completes in seconds instead of 30–45 seconds
+- Base images (`bchad-verify-ts`, `bchad-verify-py`) pre-install common tools (ESLint, TypeScript, Jest, Prettier / Ruff, mypy, pytest) — `npm ci` only installs product-specific dependencies that differ from the base
+- Time budget within 60s NFR: ~5s container startup + ~5–15s dependency install (cached) + ~30s verification checks + ~10s margin
 
 **Pattern Library** (`patterns/crud_ui/`)
 - `dag.yaml` — CRUD+UI DAG template with stage definitions, dependencies, defaults
 - `prompts/migrate.tmpl`, `api.tmpl`, `frontend.tmpl`, `tests.tmpl`, `config.tmpl` — Go text/template files for five-layer prompt construction; snapshot tests via cupaloy lock initial good state
-- Semgrep rules (`semgrep/`) — custom rules for required security checks
 
 **Tests** (`internal/budget/`, `internal/verify/`, `internal/engine/`)
 - `allocator_test.go` — all eight budget test cases from testing.md; within-limit assertion; truncation order
@@ -248,6 +278,7 @@ A complete pipeline run on `payments-dashboard-test` (seeded test codebase): `bc
 - On `approval.requested` event: post Slack message with migration SQL preview + Approve/Reject buttons
 - Approval/rejection triggers Temporal signal via REST API call to control plane
 - Note: This is OQ-1. The answer is: v1 ships both CLI and Slack approvals. The CLI is sufficient for terminal workflows; Slack covers engineers who prefer async notification.
+- *Scope risk: Slack integration requires a Slack app, OAuth flow, message formatting, interactive button handling, and Valkey Streams consumer wiring. If this threatens Phase 4 timeline, defer to first week of v2. CLI + GitHub PR notifications are sufficient for v1's pilot engineers.*
 
 **Tests**
 - `branch_test.go` — per-stage commit format, branch naming convention
@@ -255,6 +286,12 @@ A complete pipeline run on `payments-dashboard-test` (seeded test codebase): `bc
 - `score_test.go` — all three test cases from testing.md §Trust Score section
 - `phase_test.go` — phase transition correctness; downgrade on 3 consecutive low scores
 - `tier2_test.go` (workflow replay) — fix loop execution; main-branch-failing bypass; timeout handling
+
+**Tier 2 test fixtures** (`testdata/fixtures/github/`)
+- `check-runs-main-passing.json` — mock GitHub Checks API response showing green main branch (normal path: proceed with fix loop)
+- `check-runs-main-failing-same-test.json` — mock response showing main branch failing on the same test as the PR (baseline path: `blocked_by_baseline`, skip fix loop)
+- `check-runs-main-failing-different-test.json` — mock response showing main branch failing on different tests (mixed path: enter fix loop for PR-specific failures only)
+- Without these fixtures, the baseline check logic is untestable without a real GitHub repo with a failing main branch
 
 #### Milestone
 Full end-to-end pipeline run produces a real GitHub PR on `payments-dashboard-test` with a generation report, per-stage commits, correct cost summary, and a trust score recorded for the engineer. CLI approval flow for migration stage works. PR passes Tier 2 gate (GitHub Actions CI on test repo).
@@ -269,17 +306,32 @@ Full end-to-end pipeline run produces a real GitHub PR on `payments-dashboard-te
 
 ### Phase 5: Validation and Launch (Days 52–60)
 
-**Objective:** Run the full 60-feature validation protocol, hit ≥80% CI pass rate, fix systematic failures (primarily through profile corrections), and ship v1.
+**Objective:** Run the full 60-feature validation protocol, hit ≥80% CI pass rate, fix systematic failures (primarily through profile corrections and prompt tuning), and ship v1.
+
+*Time allocation within Phase 5: Days 52–53 validation infrastructure. Day 54 first validation run. Days 55–58 tuning iterations (profile corrections + prompt adjustments). Day 59 final validation run. Day 60 launch gate review.*
 
 #### Deliverables
 
-**Validation infrastructure** (`cmd/bchad/`)
+**Validation infrastructure** (`cmd/bchad/`) — Days 52–53
 - `bchad validate --suite validation/v1 --products payments-dashboard,claims-portal` — runs validation suite: 60 features (30 per product), proportional mix (40% simple, 40% medium, 20% complex); measures CI pass rate, cleanup time, error category breakdown; outputs confidence intervals
 - `testdata/` fully populated: specs, profiles, gate-results, prompt snapshots
+- Note: running 60 features = ~300 LLM calls in a batch. Run the validation suite overnight or in batches of 10 to stay within Anthropic API rate limits (see Risk Register).
 
-**Prompt tuning loop**
-- If CI pass rate below 80%: analyze error category breakdown; classify as profile errors (wrong examples → tech lead fixes profile) vs. prompt errors (correct examples but wrong generation → update prompt template via validation-protocol-gated PR)
+**First validation run** — Day 54
+- Run the full 60-feature suite
+- Expected: first run will not hit 80%. The purpose is to surface systematic failures, not to pass.
+
+**Prompt tuning loop** — Days 55–58 (3–4 days explicitly budgeted for iteration)
+- Analyze error category breakdown from first validation run
+- Classify each systematic failure: profile error (wrong examples → tech lead fixes profile) vs. prompt error (correct examples but wrong generation → update prompt template via validation-protocol-gated PR) vs. gate error (verification check is too strict/loose → adjust gate configuration)
+- Priority order: fix profile errors first (they cascade into every run), then prompt errors, then gate tuning
+- Each tuning iteration: fix → re-run affected subset of validation features → measure delta → decide next fix
 - Snapshot tests updated as prompt templates are tuned
+- The validation suite will almost certainly surface failures that require this iteration — that's its purpose. This time is not padding; it is the core of Phase 5.
+
+**Final validation run** — Day 59
+- Full 60-feature suite with all corrections applied
+- This is the launch gate measurement
 
 **Observability baseline**
 - OpenTelemetry traces configured for all pipeline components (each LLM call, retrieval query, Tier 1 gate, Tier 2 gate as spans tied to run ID)
@@ -319,6 +371,7 @@ Full end-to-end pipeline run produces a real GitHub PR on `payments-dashboard-te
 - `ApprovalGate`: migration approval with SQL preview, rollback preview, schema diff
 - WebSocket connection to `bchad:run:{run_id}:events` Valkey Stream via XREAD bridged by control plane API
 - SSO authentication for web sessions (Athena's IdP via OAuth; CLI retains GITHUB_TOKEN identity)
+- *SSO dependency: IdP integration (Okta/Azure AD app registration, redirect URI configuration, client credentials) requires IT department involvement. Start the SSO app registration request in the last week of v1 (Day 55–60) so the IdP configuration is ready when web UI development begins. Without lead time, SSO becomes a blocker at Day 75+.*
 
 **Phase C: Integration Pattern (Days 75–100)**
 - New DAG template: `patterns/integration/dag.yaml` with stages for external-service contract, adapter code, mock generation, integration tests
@@ -425,7 +478,8 @@ These decisions made during the design interview are reflected throughout the ph
 | Container toolchain: mount product's manifest from S3 | Phase 3: `docker/verify-ts/`, `verify-py/` design |
 | Cost model: ~$1.66 baseline, $5 ceiling with 2× guardrail | Phase 2: `cost.go` with Valkey accumulator |
 | Temporal workers: 2 tasks, single queue, I/O bound | Phase 0: deployment config |
-| OQ-1: Slack approvals ship in v1 alongside CLI | Phase 4: `internal/adapters/slack.go` |
+| v1 strictly sequential: no parallel even for independent stages | Phase 2: `pipeline.go` sequential dispatch; v2 Phase A adds parallel |
+| OQ-1: Slack approvals ship in v1 alongside CLI | Phase 4: `internal/adapters/slack.go` (scope risk flagged — may defer to v2 week 1) |
 | OQ-2: S3 retention 7 years (SOC 2 Type II) | Phase 5: lifecycle policy |
 | OQ-3: Generate CRUD + structured TODOs for non-CRUD | Phase 3: TODO emission format |
 | OQ-4: Aggregate-only trust visibility to leadership | Phase 4 (individual scores) + v3 Phase E (aggregate dashboard) |
@@ -443,6 +497,8 @@ These decisions made during the design interview are reflected throughout the ph
 | LLM model quality regression after Anthropic model update | Low | Medium | All | Prompt version tracking in `bchad_prompt_log`; validation suite as regression test on every prompt change; model selection is per-stage config |
 | GitHub Actions CI flakiness in v1 products blocks Tier 2 | Medium | Low | Phase 4 | Tier 2 baseline check (`blocked_by_baseline` outcome); trust score excludes these; surfaces CI reliability data to tech leads |
 | Engineer adoption: engineers don't trust factory output | Medium | High | All | Phase 1 (supervised mode, every stage approved) builds trust incrementally; blind code review in validation protocol proves quality before launch |
+| Anthropic API rate limits during validation suite | Medium | Medium | Phase 5 | 60 features × ~5 stages × ~1.2 attempts = ~360 LLM calls in a batch. At Sonnet 4's rate limits, this could take longer than expected. Mitigation: run the validation suite overnight or in batches of 10; budget Day 54 as a full-day run, not a quick check |
+| SSO IdP integration blocks v2 web UI | Low | Medium | v2 Phase B | Enterprise IdP app registration (Okta/Azure AD) requires IT department involvement and may take 1–2 weeks. Start the request in the last week of v1 (Day 55–60) so configuration is ready when web UI development begins |
 
 ---
 
@@ -450,7 +506,7 @@ These decisions made during the design interview are reflected throughout the ph
 
 | Item | Deferred To | Rationale |
 |---|---|---|
-| Parallel stage execution | v2 Phase A | Sequential is safe for v1 time budget; parallel adds debuggability complexity |
+| Parallel stage execution (including independent stages) | v2 Phase A | v1 is strictly sequential: migrate → config → api → frontend → tests, one at a time. Even independent stages (migrate and config) run sequentially. This simplifies debugging and fits the 15-minute NFR (~9–14 min sequential). Parallel dispatch of independent stages saves 15–20 seconds — meaningful at scale but not worth the concurrency debugging cost in v1 |
 | Web review UI | v2 Phase B | CLI sufficient for v1 pilot engineers; web is better UX but not blocking |
 | Go language adapter | v2 Phase D | No Go product in v1 scope |
 | Post-merge webhook re-index | v2 Phase E | Manual re-index (`bchad index`) sufficient for v1's two products |
@@ -464,4 +520,4 @@ These decisions made during the design interview are reflected throughout the ph
 
 ---
 
-*SF-2026-06 · Rev. 1 · March 2026*
+*SF-2026-06 · Rev. 2 · March 2026*
