@@ -48,11 +48,11 @@ func PipelineWorkflow(ctx workflow.Context, input PipelineInput) (*PipelineOutpu
 
 	// Set search attributes for Temporal dashboard filtering.
 	// These enable filtering by product, engineer, and trust phase in the Temporal UI.
-	_ = workflow.UpsertSearchAttributes(ctx, map[string]interface{}{
-		"product":     input.ProductID,
-		"engineer":    input.EngineerID,
-		"trust_phase": input.TrustPhase,
-	})
+	_ = workflow.UpsertTypedSearchAttributes(ctx,
+		temporal.NewSearchAttributeKeyKeyword("product").ValueSet(input.ProductID),
+		temporal.NewSearchAttributeKeyKeyword("engineer").ValueSet(input.EngineerID),
+		temporal.NewSearchAttributeKeyKeyword("trust_phase").ValueSet(input.TrustPhase),
+	)
 
 	// --- Signal channel ---
 	approvalCh := workflow.GetSignalChannel(ctx, ApprovalSignalName)

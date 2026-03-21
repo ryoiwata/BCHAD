@@ -377,7 +377,7 @@ func resolveEngineerID(ctx context.Context) string {
 
 		resp, err := http.DefaultClient.Do(req)
 		if err == nil {
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			var ghUser struct {
 				Login string `json:"login"`
 			}

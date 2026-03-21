@@ -66,7 +66,7 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest) (<-cha
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		var errResp apiErrorResponse
 		_ = json.NewDecoder(resp.Body).Decode(&errResp)
 		apiErr := &APIError{StatusCode: resp.StatusCode}
@@ -77,7 +77,7 @@ func (c *Client) GenerateStream(ctx context.Context, req GenerateRequest) (<-cha
 
 	events := make(chan StreamEvent, 32)
 	go func() {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		defer close(events)
 		parseSSEStream(ctx, resp.Body, events)
 	}()

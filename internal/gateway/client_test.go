@@ -90,7 +90,7 @@ func TestGenerate_Headers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if capturedHeaders.Get("x-api-key") != "test-api-key" {
 		t.Errorf("x-api-key header: got %q", capturedHeaders.Get("x-api-key"))

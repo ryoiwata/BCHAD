@@ -140,7 +140,7 @@ func (c *Client) Generate(ctx context.Context, req GenerateRequest) (*GenerateRe
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp apiErrorResponse
