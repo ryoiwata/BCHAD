@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bchad.athena.internal/schemas/bchadspec.v1.json",
+  "title": "BCHADSpec",
+  "description": "Normalized feature specification — the primary input to the BCHAD software factory. Describes the entity, fields, permissions, UI requirements, and compliance constraints for a feature to be generated.",
+  "type": "object",
+  "required": ["product", "pattern", "entity"],
+  "additionalProperties": false,
+  "properties": {
+    "product": {
+      "type": "string",
+      "description": "Identifier of the target product (e.g. 'payments-dashboard', 'claims-portal').",
+      "minLength": 1
+    },
+    "pattern": {
+      "type": "string",
+      "description": "Generation pattern that determines the DAG template and stage set.",
+      "enum": ["crud_ui", "integration", "workflow", "analytics"]
+    },
+    "entity": {
+      "$ref": "#/$defs/EntitySpec"
+    },
+    "permissions": {
+      "type": "string",
+      "description": "Permission scope required to access this feature (e.g. 'payment_methods:manage')."
+    },
+    "audit": {
+      "type": "boolean",
+      "description": "When true, every state-changing operation must include an audit log call.",
+      "default": false
+    },
+    "integrations": {
+      "type": "array",
+      "description": "List of integrations to activate (e.g. ['vault', 'launchdarkly']).",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "ui": {
+      "$ref": "#/$defs/UISpec"
+    },
+    "compliance": {
+      "$ref": "#/$defs/ComplianceFlags"
+    }
+  },
+  "$defs": {
+    "EntitySpec": {
+      "title": "EntitySpec",
+      "description": "The domain entity to be generated.",
+      "type": "object",
+      "required": ["name", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "PascalCase entity name (e.g. 'PaymentMethod', 'ClaimsRecord').",
+          "pattern": "^[A-Z][a-zA-Z0-9]*$",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "array",
+          "description": "List of fields on the entity. At least one field is required.",
+          "items": {
+            "$ref": "#/$defs/FieldSpec"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "FieldSpec": {
+      "title": "FieldSpec",
+      "description": "A single field on the entity.",
+      "type": "object",
+      "required": ["name", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Field name in snake_case.",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "description": "Scalar type of the field.",
+          "enum": ["string", "enum", "boolean", "integer", "float", "date"]
+        },
+        "values": {
+          "type": "array",
+          "description": "Allowed enum values. Required when kind is 'enum'.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "sensitive": {
+          "type": "boolean",
+          "description": "When true, the field must use the Vault integration pattern.",
+          "default": false
+        },
+        "required": {
+          "type": "boolean",
+          "description": "When true, the field is non-nullable in the database and required in the form.",
+          "default": true
+        },
+        "needs_clarification": {
+          "type": "boolean",
+          "description": "When true, the NL translator could not determine this field's intent unambiguously.",
+          "default": false
+        },
+        "reason": {
+          "type": "string",
+          "description": "Explanation of why clarification is needed. Only present when needs_clarification is true."
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": { "const": "enum" }
+        }
+      },
+      "then": {
+        "required": ["values"]
+      }
+    },
+    "UISpec": {
+      "title": "UISpec",
+      "description": "Which UI views to generate for this entity.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "list": {
+          "type": "boolean",
+          "description": "Generate a paginated list view.",
+          "default": true
+        },
+        "detail": {
+          "type": "boolean",
+          "description": "Generate a detail/read-only view.",
+          "default": true
+        },
+        "form": {
+          "type": "boolean",
+          "description": "Generate a create/edit form.",
+          "default": true
+        }
+      }
+    },
+    "ComplianceFlags": {
+      "title": "ComplianceFlags",
+      "description": "Compliance requirements that affect code generation. Auto-detected from the product profile.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "soc2": {
+          "type": "boolean",
+          "description": "Product is under SOC 2 compliance. Enables audit logging and data handling constraints.",
+          "default": false
+        },
+        "hipaa": {
+          "type": "boolean",
+          "description": "Product is under HIPAA compliance. Enables PHI handling patterns and stricter access controls.",
+          "default": false
+        }
+      }
+    }
+  }
+}
