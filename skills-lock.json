@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "golang-testing": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "db6e910031d9c289f91697cf2397b8a3f717c6fdeae7a115e811a32544d99e11"
+    }
+  }
+}
