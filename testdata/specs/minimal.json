@@ -1,0 +1,10 @@
+{
+  "product": "claims-portal",
+  "pattern": "crud_ui",
+  "entity": {
+    "name": "Widget",
+    "fields": [
+      {"name": "title", "kind": "string", "required": true}
+    ]
+  }
+}

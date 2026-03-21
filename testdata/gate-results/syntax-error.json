@@ -1,0 +1,11 @@
+{
+  "passed": false,
+  "tier": 1,
+  "checks": [
+    {"name": "typecheck", "passed": false, "output": "src/api/routes.ts(15,3): error TS1005: ';' expected."},
+    {"name": "lint", "passed": false, "output": "Parsing error: Unexpected token"}
+  ],
+  "error_output": "error TS1005: ';' expected at line 15, column 3\nParsing error: Unexpected token on line 15",
+  "error_category": "syntax",
+  "duration_ms": 890
+}

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "tier": 1,
+  "checks": [
+    {"name": "typecheck", "passed": true, "output": "ok"},
+    {"name": "lint", "passed": true, "output": "ok"},
+    {"name": "semgrep", "passed": true, "output": "No findings"},
+    {"name": "route_conflicts", "passed": true, "output": "No conflicts"}
+  ],
+  "error_output": "",
+  "error_category": "",
+  "duration_ms": 4210
+}

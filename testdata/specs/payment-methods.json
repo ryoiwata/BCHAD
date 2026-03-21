@@ -1,0 +1,18 @@
+{
+  "product": "payments-dashboard",
+  "pattern": "crud_ui",
+  "entity": {
+    "name": "PaymentMethod",
+    "fields": [
+      {"name": "label", "kind": "string", "required": true},
+      {"name": "type", "kind": "enum", "values": ["credit_card", "ach", "wire"], "required": true},
+      {"name": "is_default", "kind": "boolean", "required": false},
+      {"name": "vault_ref", "kind": "string", "sensitive": true, "required": false}
+    ]
+  },
+  "permissions": "payment_methods:manage",
+  "audit": true,
+  "integrations": ["vault"],
+  "ui": {"list": true, "detail": true, "form": true},
+  "compliance": {"soc2": true, "hipaa": false}
+}
