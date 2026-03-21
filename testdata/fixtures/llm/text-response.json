@@ -1,0 +1,18 @@
+{
+  "id": "msg_01testresponse",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "--- FILE: prisma/migrations/20260315_create_payment_methods.sql ---\nCREATE TABLE payment_methods (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  merchant_id UUID NOT NULL,\n  type TEXT NOT NULL,\n  label TEXT NOT NULL,\n  is_default BOOLEAN NOT NULL DEFAULT false,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n--- END FILE ---"
+    }
+  ],
+  "model": "claude-sonnet-4-20250514",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 1500,
+    "output_tokens": 87
+  }
+}
