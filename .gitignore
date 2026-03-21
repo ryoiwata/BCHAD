@@ -24,12 +24,43 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
+# Secrets — never commit
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Compiled binaries
+bin/
+
+# Temporary files
+/tmp/
+*.tar.gz
+
+# Node / frontend
+node_modules/
+web/.next/
+web/node_modules/
+web/out/
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfstate.*.backup
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+
+# OS artifacts
+.DS_Store
+Thumbs.db
 
 # Untitled files
 Untitled
@@ -42,3 +73,6 @@ firebase-debug.log
 
 # MCP
 .mcp.json
+
+# Build cache
+.cache/
