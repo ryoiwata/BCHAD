@@ -174,10 +174,10 @@ func newS3Client(ctx context.Context, endpoint string) (*s3.Client, error) {
 	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	if accessKey == "" {
-		accessKey = "bchad" // MinIO local default
+		accessKey = "minioadmin" // MinIO local default (MINIO_ROOT_USER)
 	}
 	if secretKey == "" {
-		secretKey = "bchad123" // MinIO local default
+		secretKey = "minioadmin" // MinIO local default (MINIO_ROOT_PASSWORD)
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx,

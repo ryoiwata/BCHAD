@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -348,7 +347,7 @@ func (sc *Scanner) uploadProfile(ctx context.Context, productID string, profile 
 	_, err = sc.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(sc.bucketName),
 		Key:         aws.String(s3Key),
-		Body:        io.NopCloser(bytes.NewReader(data)),
+		Body:        bytes.NewReader(data),
 		ContentType: aws.String("application/json"),
 	})
 	if err != nil {
