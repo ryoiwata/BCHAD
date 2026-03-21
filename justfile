@@ -21,7 +21,7 @@ dev-up:
     @docker compose ps
     @echo "Registering bchad Temporal namespace (idempotent)..."
     @sleep 3
-    @TEMPORAL_IP=$$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' bchad-temporal) && \
+    @TEMPORAL_IP=$$(docker inspect -f '{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}{{{{end}}}}' bchad-temporal) && \
         docker exec bchad-temporal tctl --address $$TEMPORAL_IP:7233 --namespace bchad namespace register --retention 72h 2>&1 | grep -v "DEPRECATION" || true
 
 # Stop local infrastructure
