@@ -31,6 +31,9 @@ go.work.sum
 # .idea/
 # .vscode/
 
+# Untitled files
+Untitled
+
 # Firebase
 firebase-debug.log
 
