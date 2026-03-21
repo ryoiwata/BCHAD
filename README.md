@@ -174,7 +174,7 @@ go run ./cmd/worker
 
 ```bash
 # Required
-BCHAD_DATABASE_URL=postgres://bchad:bchad@localhost:5432/bchad?sslmode=disable
+BCHAD_DATABASE_URL=postgres://bchad:bchad@localhost:5433/bchad?sslmode=disable
 BCHAD_VALKEY_URL=localhost:6379
 BCHAD_S3_ENDPOINT=http://localhost:9000        # MinIO
 BCHAD_S3_BUCKET_PROFILES=bchad-codebase-profiles

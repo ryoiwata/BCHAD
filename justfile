@@ -1,8 +1,10 @@
 # BCHAD justfile — task runner for local development
 # Requires: just, docker, docker compose, go, golangci-lint, gofumpt
 
+set dotenv-load
+
 # Default environment variables for local dev
-export BCHAD_DATABASE_URL := env_var_or_default("BCHAD_DATABASE_URL", "postgres://bchad:bchad@localhost:5432/bchad?sslmode=disable")
+export BCHAD_DATABASE_URL := env_var_or_default("BCHAD_DATABASE_URL", "postgres://bchad:bchad@localhost:5433/bchad?sslmode=disable")
 export BCHAD_VALKEY_URL := env_var_or_default("BCHAD_VALKEY_URL", "localhost:6379")
 export BCHAD_S3_ENDPOINT := env_var_or_default("BCHAD_S3_ENDPOINT", "http://localhost:9000")
 export BCHAD_TEMPORAL_HOST := env_var_or_default("BCHAD_TEMPORAL_HOST", "localhost:7233")
@@ -85,3 +87,16 @@ clean:
 # Run e2e smoke script (tests all integration points)
 smoke:
     go run ./scripts/e2e-smoke/main.go
+
+# Index the test target repository into pgvector (requires dev-up + VOYAGE_API_KEY)
+# Usage: just index-repo
+index-repo:
+    go run ./cmd/bchad index \
+        --repo ~/Documents/projects/ai_engineering/gauntlet-curriculum/projects/node-express-prisma-v1-official-app \
+        --product node-express-prisma-v1
+
+# Validate embedding quality after indexing (requires dev-up + VOYAGE_API_KEY)
+# Prints top-3 retrieval results for each stage type — engineer manually evaluates quality
+# Usage: just validate-embeddings
+validate-embeddings:
+    go run ./scripts/validate-embeddings/main.go --product node-express-prisma-v1

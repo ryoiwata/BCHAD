@@ -57,7 +57,7 @@ func step1Postgres(ctx context.Context) {
 
 	dbURL := os.Getenv("BCHAD_DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://bchad:bchad@localhost:5432/bchad?sslmode=disable"
+		dbURL = "postgres://bchad:bchad@localhost:5433/bchad?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, dbURL)
