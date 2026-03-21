@@ -1,6 +1,8 @@
 # BCHAD justfile — task runner for local development
 # Requires: just, docker, docker compose, go, golangci-lint, gofumpt
 
+set dotenv-load
+
 # Default environment variables for local dev
 export BCHAD_DATABASE_URL := env_var_or_default("BCHAD_DATABASE_URL", "postgres://bchad:bchad@localhost:5433/bchad?sslmode=disable")
 export BCHAD_VALKEY_URL := env_var_or_default("BCHAD_VALKEY_URL", "localhost:6379")
