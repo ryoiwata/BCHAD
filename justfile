@@ -85,3 +85,16 @@ clean:
 # Run e2e smoke script (tests all integration points)
 smoke:
     go run ./scripts/e2e-smoke/main.go
+
+# Index the test target repository into pgvector (requires dev-up + VOYAGE_API_KEY)
+# Usage: just index-repo
+index-repo:
+    go run ./cmd/bchad index \
+        --repo ~/Documents/projects/ai_engineering/gauntlet-curriculum/projects/node-express-prisma-v1-official-app \
+        --product node-express-prisma-v1
+
+# Validate embedding quality after indexing (requires dev-up + VOYAGE_API_KEY)
+# Prints top-3 retrieval results for each stage type — engineer manually evaluates quality
+# Usage: just validate-embeddings
+validate-embeddings:
+    go run ./scripts/validate-embeddings/main.go --product node-express-prisma-v1
