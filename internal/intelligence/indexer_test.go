@@ -107,7 +107,7 @@ func TestIndexer_IndexPatterns_EmptyInput(t *testing.T) {
 func TestIndexer_UpsertToPostgres(t *testing.T) {
 	t.Skip("integration test: run with -tags=integration and live Postgres")
 
-	databaseURL := "postgres://bchad:bchad@localhost:5432/bchad?sslmode=disable"
+	databaseURL := "postgres://bchad:bchad@localhost:5433/bchad?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), databaseURL)
 	if err != nil {
 		t.Fatalf("pgxpool.New() error = %v", err)
