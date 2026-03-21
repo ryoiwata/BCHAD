@@ -22,6 +22,8 @@ dev-up:
     @echo "Registering bchad Temporal namespace (idempotent)..."
     @sleep 3
     @docker exec bchad-temporal sh -c 'IP=$(hostname -i | tr -d " "); tctl --address $IP:7233 --namespace bchad namespace register --retention 72h 2>&1 | grep -v DEPRECATION; true'
+    @echo "Registering custom search attributes (idempotent)..."
+    @docker exec bchad-temporal sh -c 'IP=$(hostname -i | tr -d " "); echo y | tctl --address $IP:7233 admin cluster add-search-attributes --name product --type Keyword --name engineer --type Keyword --name trust_phase --type Keyword 2>&1 | grep -v DEPRECATION; true'
 
 # Stop local infrastructure
 dev-down:
