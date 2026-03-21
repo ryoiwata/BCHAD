@@ -181,7 +181,7 @@ func step3MinIO(ctx context.Context) {
 		slog.Error("step 3 FAIL: GetObject", "error", err)
 		return
 	}
-	defer out.Body.Close()
+	defer func() { _ = out.Body.Close() }()
 
 	got, err := io.ReadAll(out.Body)
 	if err != nil {
@@ -335,7 +335,7 @@ func step5Anthropic(ctx context.Context) {
 		slog.Error("step 5 FAIL: HTTP request", "error", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
