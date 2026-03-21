@@ -10,6 +10,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
+
+	"github.com/athena-digital/bchad/workflows"
 )
 
 func main() {
@@ -41,9 +43,10 @@ func main() {
 
 	w := worker.New(c, "bchad-pipeline", worker.Options{})
 
-	// Workflows and activities will be registered here as they are implemented.
-	// w.RegisterWorkflow(workflows.PipelineWorkflow)
-	// w.RegisterActivity(activities.ExecuteStage)
+	w.RegisterWorkflow(workflows.PipelineWorkflow)
+	w.RegisterActivity(workflows.ExecuteStageActivity)
+	w.RegisterActivity(workflows.AssemblePRActivity)
+	w.RegisterActivity(workflows.Tier2GateActivity)
 
 	if err := w.Run(worker.InterruptCh()); err != nil {
 		slog.Error("worker stopped with error", "error", err)
