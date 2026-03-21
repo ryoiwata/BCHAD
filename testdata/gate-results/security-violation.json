@@ -1,0 +1,12 @@
+{
+  "passed": false,
+  "tier": 1,
+  "checks": [
+    {"name": "typecheck", "passed": true, "output": "ok"},
+    {"name": "lint", "passed": true, "output": "ok"},
+    {"name": "semgrep", "passed": false, "output": "bchad.no-raw-sensitive-field: vault_ref stored directly without Vault integration at src/api/routes.ts:88"}
+  ],
+  "error_output": "CRITICAL: Sensitive field 'vault_ref' stored in plain text. Must use VaultClient.store().",
+  "error_category": "security",
+  "duration_ms": 5120
+}

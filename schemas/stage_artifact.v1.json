@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bchad.athena.internal/schemas/stage_artifact.v1.json",
+  "title": "StageArtifact",
+  "description": "Output of a completed pipeline stage. Consumed by downstream stages and stored in S3. Contains generated files, structured outputs, gate result, cost, and attempt count.",
+  "type": "object",
+  "required": ["stage_id", "stage_type", "status", "gate_result", "attempts", "cost"],
+  "additionalProperties": false,
+  "properties": {
+    "stage_id": {
+      "type": "string",
+      "description": "Stage identifier matching the BCHADPlan stage ID (e.g. 'migrate', 'api', 'frontend').",
+      "minLength": 1
+    },
+    "stage_type": {
+      "type": "string",
+      "description": "Stage type descriptor (e.g. 'db_migration', 'rest_endpoints', 'react_components').",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "description": "Completion status of the stage.",
+      "enum": ["passed", "failed", "awaiting_approval", "skipped"]
+    },
+    "generated_files": {
+      "type": "array",
+      "description": "Files created or modified by this stage.",
+      "items": {
+        "$ref": "#/$defs/GeneratedFile"
+      },
+      "default": []
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Structured outputs produced by this stage, consumed by downstream stages. Keys are output identifiers (e.g. 'schema_definition', 'endpoint_contracts', 'component_paths', 'migration_summary').",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "gate_result": {
+      "$ref": "https://bchad.athena.internal/schemas/gate_result.v1.json"
+    },
+    "attempts": {
+      "type": "integer",
+      "description": "Total number of generation attempts made for this stage, including the final successful one.",
+      "minimum": 1
+    },
+    "cost": {
+      "type": "number",
+      "description": "Total LLM cost for this stage across all attempts, in USD.",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "GeneratedFile": {
+      "title": "GeneratedFile",
+      "description": "A file that was created or modified by this stage.",
+      "type": "object",
+      "required": ["path", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "File path relative to the repository root.",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "description": "Whether the file was created new or modified in-place.",
+          "enum": ["create", "modify"]
+        },
+        "language": {
+          "type": "string",
+          "description": "Programming language of the file (e.g. 'typescript', 'python', 'go', 'sql')."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "passed": false,
+  "tier": 1,
+  "checks": [
+    {"name": "typecheck", "passed": true, "output": "ok"},
+    {"name": "lint", "passed": true, "output": "ok"},
+    {"name": "route_conflicts", "passed": false, "output": "Route conflict: POST /api/payment-methods conflicts with existing route in src/api/routes/payments.ts:55"}
+  ],
+  "error_output": "Route conflict detected: POST /api/payment-methods is already registered.",
+  "error_category": "conflict",
+  "duration_ms": 1890
+}

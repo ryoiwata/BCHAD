@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bchad.athena.internal/schemas/gate_result.v1.json",
+  "title": "GateResult",
+  "description": "Output of a verification gate (Tier 1 per-stage or Tier 2 integration). Captures pass/fail status, individual check results, error classification, and timing.",
+  "type": "object",
+  "required": ["passed", "tier", "error_category", "duration_ms"],
+  "additionalProperties": false,
+  "properties": {
+    "passed": {
+      "type": "boolean",
+      "description": "Whether all checks in this gate passed."
+    },
+    "tier": {
+      "type": "integer",
+      "description": "Gate tier: 1 (per-stage, fast) or 2 (integration, full CI).",
+      "enum": [1, 2]
+    },
+    "checks": {
+      "type": "array",
+      "description": "Individual check results within this gate.",
+      "items": {
+        "$ref": "#/$defs/GateCheck"
+      },
+      "default": []
+    },
+    "error_output": {
+      "type": "string",
+      "description": "Raw error output captured from the verification container. Full content stored in S3; truncated here."
+    },
+    "error_category": {
+      "type": "string",
+      "description": "Error classification used to route the retry strategy. Empty string when gate passed.",
+      "enum": ["syntax", "style", "type", "logic", "context", "conflict", "security", "specification", ""]
+    },
+    "duration_ms": {
+      "type": "integer",
+      "description": "Wall-clock duration of the gate execution in milliseconds.",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "GateCheck": {
+      "title": "GateCheck",
+      "description": "Result of a single check within a gate (e.g. typecheck, lint, route_conflicts).",
+      "type": "object",
+      "required": ["name", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Check identifier (e.g. 'typecheck', 'lint', 'route_conflicts', 'auth_middleware', 'semgrep').",
+          "minLength": 1
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether this individual check passed."
+        },
+        "output": {
+          "type": "string",
+          "description": "Brief error or success message from this check."
+        }
+      }
+    }
+  }
+}

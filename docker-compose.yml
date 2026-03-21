@@ -1,0 +1,110 @@
+version: "3.9"
+
+networks:
+  bchad:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: bchad-postgres
+    environment:
+      POSTGRES_DB: bchad
+      POSTGRES_USER: bchad
+      POSTGRES_PASSWORD: bchad
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - bchad
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bchad -d bchad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8
+    container_name: bchad-valkey
+    ports:
+      - "6379:6379"
+    networks:
+      - bchad
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: bchad-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - bchad
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: bchad-minio-init
+    depends_on:
+      - minio
+    networks:
+      - bchad
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing local/bchad-codebase-profiles;
+      mc mb --ignore-existing local/bchad-artifacts;
+      mc mb --ignore-existing local/bchad-pattern-snapshots;
+      echo 'MinIO buckets created';
+      exit 0;
+      "
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: bchad-temporal
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=bchad
+      - POSTGRES_PWD=bchad
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - TEMPORAL_NAMESPACE=bchad
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./docker/init/temporal/development-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml
+    networks:
+      - bchad
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: bchad-temporal-ui
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8233:8080"
+    networks:
+      - bchad
+    depends_on:
+      - temporal

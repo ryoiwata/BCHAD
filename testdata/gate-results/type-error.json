@@ -1,0 +1,11 @@
+{
+  "passed": false,
+  "tier": 1,
+  "checks": [
+    {"name": "typecheck", "passed": false, "output": "src/api/routes.ts(42,15): error TS2345: Argument of type 'string' is not assignable to parameter of type 'UUID'."},
+    {"name": "lint", "passed": true, "output": "ok"}
+  ],
+  "error_output": "error TS2345: Argument of type 'string' is not assignable to parameter of type 'UUID'.",
+  "error_category": "type",
+  "duration_ms": 2340
+}

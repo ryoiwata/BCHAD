@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bchad.athena.internal/schemas/bchadplan.v1.json",
+  "title": "BCHADPlan",
+  "description": "Generation plan produced from a BCHADSpec. Defines the DAG of stages to execute, their dependencies, model assignments, cost estimates, and approval gates.",
+  "type": "object",
+  "required": ["id", "product", "pattern", "entity", "projected_cost", "stages"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique plan identifier. Format: pf-YYYYMMDD-NNN (e.g. 'pf-20260315-001').",
+      "pattern": "^pf-\\d{8}-\\d{3}$"
+    },
+    "product": {
+      "type": "string",
+      "description": "Target product identifier.",
+      "minLength": 1
+    },
+    "pattern": {
+      "type": "string",
+      "description": "Generation pattern used to build this plan.",
+      "minLength": 1
+    },
+    "entity": {
+      "type": "string",
+      "description": "PascalCase entity name being generated.",
+      "minLength": 1
+    },
+    "projected_cost": {
+      "type": "number",
+      "description": "Total projected LLM cost for this plan in USD, including expected retries.",
+      "minimum": 0
+    },
+    "stages": {
+      "type": "array",
+      "description": "Ordered list of pipeline stages in dependency order.",
+      "items": {
+        "$ref": "#/$defs/PlanStage"
+      },
+      "minItems": 1
+    },
+    "estimated_total_files": {
+      "type": "integer",
+      "description": "Sum of estimated_files across all stages.",
+      "minimum": 0
+    },
+    "human_approval_gates": {
+      "type": "array",
+      "description": "Stage IDs that require human approval before execution.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "security_review": {
+      "type": "boolean",
+      "description": "When true, this plan includes stages with sensitive fields or compliance requirements that trigger security review.",
+      "default": false
+    }
+  },
+  "$defs": {
+    "PlanStage": {
+      "title": "PlanStage",
+      "description": "A single stage in the generation DAG.",
+      "type": "object",
+      "required": ["id", "type", "human_approval", "model", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stage identifier. Standard values: 'migrate', 'config', 'api', 'frontend', 'tests'.",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Stage type descriptor. Standard values: 'db_migration', 'feature_flags_and_permissions', 'rest_endpoints', 'react_components', 'test_suite'.",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "Stage IDs that must complete before this stage can start.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "human_approval": {
+          "type": "boolean",
+          "description": "When true, this stage requires explicit human approval before execution begins."
+        },
+        "model": {
+          "type": "string",
+          "description": "Claude model identifier to use for this stage.",
+          "enum": ["claude-haiku-3.5", "claude-sonnet-4", "claude-haiku-3-5-sonnet-latest", "claude-sonnet-4-20250514"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this stage will generate.",
+          "minLength": 1
+        },
+        "estimated_files": {
+          "type": "integer",
+          "description": "Estimated number of files this stage will create or modify.",
+          "minimum": 1
+        },
+        "estimated_cost": {
+          "type": "number",
+          "description": "Projected LLM cost for this stage in USD.",
+          "minimum": 0
+        },
+        "codebase_refs": {
+          "type": "array",
+          "description": "File paths in the target repository that were retrieved as context examples for this stage.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}
