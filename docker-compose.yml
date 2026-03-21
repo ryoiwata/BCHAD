@@ -88,6 +88,8 @@ services:
       - TEMPORAL_NAMESPACE=bchad
     ports:
       - "7233:7233"
+    volumes:
+      - ./docker/init/temporal/development-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml
     networks:
       - bchad
     depends_on:
