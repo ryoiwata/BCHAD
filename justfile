@@ -93,6 +93,18 @@ clean:
 smoke:
     go run ./scripts/e2e-smoke/main.go
 
+# Start the Temporal worker in the background.
+# Kills any stale bin/worker processes first, rebuilds the binary, then starts fresh.
+# Temporal env vars (BCHAD_TEMPORAL_HOST, BCHAD_TEMPORAL_NAMESPACE) are exported above.
+# GITHUB_TOKEN is loaded from .env via set dotenv-load.
+worker:
+    @echo "Stopping any stale worker processes..."
+    -@pkill -x worker
+    @sleep 1
+    just build
+    @echo "Starting worker (BCHAD_TEMPORAL_HOST=$BCHAD_TEMPORAL_HOST, BCHAD_TEMPORAL_NAMESPACE=$BCHAD_TEMPORAL_NAMESPACE)..."
+    @./bin/worker &
+
 # Index the test target repository into pgvector (requires dev-up + VOYAGE_API_KEY)
 # Usage: just index-repo
 index-repo:
