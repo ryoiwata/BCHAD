@@ -1,0 +1,17 @@
+{
+  "product": "node-express-prisma-v1",
+  "pattern": "crud_ui",
+  "entity": {
+    "name": "PaymentMethod",
+    "fields": [
+      {"name": "type", "kind": "enum", "values": ["credit_card", "ach", "wire"], "required": true},
+      {"name": "label", "kind": "string", "required": true},
+      {"name": "is_default", "kind": "boolean"},
+      {"name": "vault_ref", "kind": "string", "sensitive": true, "required": true}
+    ]
+  },
+  "permissions": "payment_methods:manage",
+  "audit": true,
+  "integrations": ["vault"],
+  "ui": {"list": true, "detail": true, "form": true}
+}

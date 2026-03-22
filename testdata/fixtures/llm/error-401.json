@@ -1,0 +1,7 @@
+{
+  "type": "error",
+  "error": {
+    "type": "authentication_error",
+    "message": "Invalid API Key. Please refer to https://docs.anthropic.com/en/api/getting-started for details on how to authenticate."
+  }
+}

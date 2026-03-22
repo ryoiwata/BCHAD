@@ -34,6 +34,7 @@ type FileCount struct {
 type StructuralProfile struct {
 	ProductID       string            `json:"product_id"`
 	RepoPath        string            `json:"repo_path"`
+	RepoURL         string            `json:"repo_url,omitempty"` // HTTPS URL, e.g. "https://github.com/owner/repo"
 	Language        string            `json:"language"`       // "typescript", "go", "python"
 	Framework       string            `json:"framework"`      // "express", "chi", "fastapi"
 	ORM             string            `json:"orm"`            // "prisma", "pgx", "sqlalchemy"

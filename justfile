@@ -19,6 +19,11 @@ dev-up:
     docker compose up -d
     @echo "Waiting for services to be healthy..."
     @docker compose ps
+    @echo "Registering bchad Temporal namespace (idempotent)..."
+    @sleep 3
+    @docker exec bchad-temporal sh -c 'temporal operator namespace describe --namespace bchad --address temporal:7233 >/dev/null 2>&1 || temporal operator namespace create --namespace bchad --retention 72h --address temporal:7233 2>&1; true'
+    @echo "Registering custom search attributes (idempotent)..."
+    @docker exec bchad-temporal sh -c 'temporal operator search-attribute create --namespace bchad --address temporal:7233 --name product --type Keyword --name engineer --type Keyword --name trust_phase --type Keyword 2>&1; true'
 
 # Stop local infrastructure
 dev-down:
@@ -87,6 +92,18 @@ clean:
 # Run e2e smoke script (tests all integration points)
 smoke:
     go run ./scripts/e2e-smoke/main.go
+
+# Start the Temporal worker in the background.
+# Kills any stale bin/worker processes first, rebuilds the binary, then starts fresh.
+# Temporal env vars (BCHAD_TEMPORAL_HOST, BCHAD_TEMPORAL_NAMESPACE) are exported above.
+# GITHUB_TOKEN is loaded from .env via set dotenv-load.
+worker:
+    @echo "Stopping any stale worker processes..."
+    -@pkill -x worker
+    @sleep 1
+    just build
+    @echo "Starting worker (BCHAD_TEMPORAL_HOST=$BCHAD_TEMPORAL_HOST, BCHAD_TEMPORAL_NAMESPACE=$BCHAD_TEMPORAL_NAMESPACE)..."
+    @./bin/worker &
 
 # Index the test target repository into pgvector (requires dev-up + VOYAGE_API_KEY)
 # Usage: just index-repo

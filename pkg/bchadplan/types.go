@@ -35,6 +35,10 @@ type BCHADPlan struct {
 	// SecurityReview indicates this plan includes stages with sensitive fields or compliance
 	// requirements that trigger security review.
 	SecurityReview bool `json:"security_review,omitempty"`
+
+	// RepoURL is the HTTPS URL of the target GitHub repository, e.g.
+	// "https://github.com/owner/repo". Populated from the codebase structural profile.
+	RepoURL string `json:"repo_url,omitempty"`
 }
 
 // PlanStage is a single stage in the generation DAG.

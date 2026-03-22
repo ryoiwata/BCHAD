@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	gogit "github.com/go-git/go-git/v5"
 )
 
 // S3Uploader is the interface the scanner uses to upload to S3.
@@ -46,6 +47,13 @@ func (sc *Scanner) Scan(ctx context.Context, repoPath, productID string) (*Struc
 		Language:        "typescript",
 		DirectoryLayout: make(map[string]string),
 		ScannedAt:       time.Now().UTC(),
+	}
+
+	// Resolve the GitHub HTTPS URL from the git remote (best-effort).
+	if repoURL, err := resolveRepoURL(repoPath); err == nil {
+		profile.RepoURL = repoURL
+	} else {
+		slog.Warn("scanner: could not resolve git remote URL", "repo_path", repoPath, "error", err)
 	}
 
 	// Detect framework stack from package.json
@@ -334,6 +342,43 @@ func classifyFile(relPath string) string {
 	}
 
 	return "other"
+}
+
+// resolveRepoURL opens the git repo at repoPath and returns the HTTPS URL of
+// the "origin" remote (or the first remote found). SSH URLs are converted to HTTPS.
+func resolveRepoURL(repoPath string) (string, error) {
+	repo, err := gogit.PlainOpen(repoPath)
+	if err != nil {
+		return "", fmt.Errorf("open git repo: %w", err)
+	}
+	remotes, err := repo.Remotes()
+	if err != nil || len(remotes) == 0 {
+		return "", fmt.Errorf("no git remotes found")
+	}
+	// Prefer "origin", fall back to first remote.
+	for _, r := range remotes {
+		if r.Config().Name == "origin" {
+			if urls := r.Config().URLs; len(urls) > 0 {
+				return normalizeGitURL(urls[0]), nil
+			}
+		}
+	}
+	if urls := remotes[0].Config().URLs; len(urls) > 0 {
+		return normalizeGitURL(urls[0]), nil
+	}
+	return "", fmt.Errorf("no remote URLs found")
+}
+
+// normalizeGitURL converts SSH remote URLs to HTTPS and strips the .git suffix.
+// git@github.com:owner/repo.git  →  https://github.com/owner/repo
+// https://github.com/owner/repo.git  →  https://github.com/owner/repo
+func normalizeGitURL(u string) string {
+	if strings.HasPrefix(u, "git@github.com:") {
+		u = strings.TrimPrefix(u, "git@github.com:")
+		u = strings.TrimSuffix(u, ".git")
+		return "https://github.com/" + u
+	}
+	return strings.TrimSuffix(u, ".git")
 }
 
 // uploadProfile serialises the profile to JSON and uploads to S3.

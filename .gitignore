@@ -76,3 +76,9 @@ firebase-debug.log
 
 # Build cache
 .cache/
+
+# E2E Smoke
+e2e-smoke
+
+# Validate Embeddings
+validate-embeddings
